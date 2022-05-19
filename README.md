@@ -1,0 +1,1 @@
+# GLS_Odoo5_Prototype
