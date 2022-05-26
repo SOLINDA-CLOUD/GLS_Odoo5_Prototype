@@ -23,7 +23,8 @@ class PaymentSchedule(models.Model):
     payment_date = fields.Date('Payment Date')
     currency_id = fields.Many2one('res.currency', default=lambda self: self.env.company.currency_id)
     amount = fields.Monetary(currency_field='currency_id')
-    product_id = fields.Many2one('product.product', string='Service')
+    # product_id = fields.Many2one('product.product', string='Service')
+    account_id = fields.Many2one('account.account', string='Account')
     name = fields.Char('Description')
     progress = fields.Float('Progress')
     bill = fields.Float('Bill')
@@ -36,12 +37,12 @@ class PaymentSchedule(models.Model):
         for this in self:
             this.total_amount = this.bill * this.order_id.amount_total
     
-    @api.onchange('product_id')
-    def _onchange_product_id(self):
-        if self.product_id:
-            self.name = self.product_id.display_name
-        else:
-            self.name = False
+    # @api.onchange('product_id')
+    # def _onchange_product_id(self):
+    #     if self.product_id:
+    #         self.name = self.product_id.display_name
+    #     else:
+    #         self.name = False
     
 
     def create_invoice(self):
@@ -49,8 +50,9 @@ class PaymentSchedule(models.Model):
         invoice_vals['invoice_line_ids'] = [(0,0,{
             'sequence': 10,
             'name': self.name,
-            'product_id': self.product_id.id,
-            'product_uom_id': self.product_id.uom_id.id,
+            # 'product_id': self.product_id.id,
+            # 'product_uom_id': self.product_id.uom_id.id,
+            'account_id': self.account_id.id,
             'quantity': 1,
             'price_unit': self.total_amount,
             'analytic_account_id': self.order_id.analytic_account_id.id,
