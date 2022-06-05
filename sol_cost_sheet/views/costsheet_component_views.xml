@@ -1,5 +1,28 @@
 <odoo>
   <data>
+    <record id="item_item_view_search" model="ir.ui.view">
+      <field name="name">item.item.view.search</field>
+      <field name="model">item.item</field>
+      <field name="arch" type="xml">
+        <search string="">
+
+          <field name="product_id" filter_domain="['|','|',('product_id','ilike',self),('cost_sheet_id','ilike',self),('rap_id','ilike',self),('category_id','ilike',self),('component','ilike',self)]" />
+          <field name="cost_sheet_id" />
+          <field name="rap_id" />
+          <field name="category_id" />
+          <field name="component_id" />
+          <group expand="0" string="Group By">
+            <filter name="group_by_rap" string="RAP" context="{'group_by': 'rap_id'}" />
+            <filter name="group_by_rab" string="RAB" context="{'group_by': 'cost_sheet_id'}" />
+            <filter name="group_by_category" string="Category" context="{'group_by': 'category_id'}" />
+            <filter name="group_by_component" string="Component" context="{'group_by': 'component_id'}" />
+          </group>
+
+        </search>
+      </field>
+    </record>
+
+
     <record id="costsheet_component_view_tree" model="ir.ui.view">
       <field name="name">item.item.view.tree</field>
       <field name="model">item.item</field>

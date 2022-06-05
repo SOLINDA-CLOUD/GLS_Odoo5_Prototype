@@ -59,7 +59,13 @@ class CsRAP(models.Model):
                 'view_mode': 'tree',
                 'res_model': 'item.item',
                 'view_id' : self.env.ref('sol_cost_sheet.rap_component_view_tree').id,
-                'domain': [('rap_id','=',self.id)]
+                'search_view_id': self.env.ref('sol_cost_sheet.item_item_view_search').id,
+                'domain': [('rap_id','=',self.id)],
+                'context': {
+                    'search_default_group_by_rap':1,
+                    'search_default_group_by_category':2,
+                    'search_default_group_by_component':3
+                    }
                 # 'domain': [('rap_id','=',self.id),('can_be_purchased','=',True)]
         }
     
@@ -118,7 +124,7 @@ class CsRAP(models.Model):
             "view_mode": "tree",
             "res_model": "project.rap",
             "domain": [('rap_id', '=', self.id)],
-            "context": {'default_rap_id':self.id} 
+            "context": {'default_rap_id':self.id},
         }
 
         
