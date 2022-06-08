@@ -119,6 +119,9 @@ class ExistingChemical(models.Model):
 class CrmLead(models.Model):
     _inherit = 'crm.lead'
 
+    date_deadline = fields.Date('Expected Closing', required=True)
+    tag_ids = fields.Many2many('crm.tag', string='Tags', required=True)
+
     # Type of business
     business_type_id = fields.Many2one('business.type', string='Business Type')
 
