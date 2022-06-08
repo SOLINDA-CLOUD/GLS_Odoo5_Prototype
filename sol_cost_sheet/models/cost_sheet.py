@@ -1,3 +1,4 @@
+import copy
 from odoo import _, api, fields, models
 from odoo.exceptions import ValidationError
 from odoo.tools.float_utils import float_round
@@ -21,7 +22,8 @@ class CostSheet(models.Model):
     revisied = fields.Boolean('Revisied')
     cost_sheet_revision_id = fields.Many2one('cost.sheet', string='Cost Sheet Revision')
     tax_id = fields.Many2one('account.tax', string='Tax',copy=True)
-    component_line_ids = fields.One2many('component.component', 'cost_sheet_id', string='Component Line',copy=True)
+    item_line_ids = fields.One2many('item.item', 'cost_sheet_id', string='Items Line',copy=False)
+    component_line_ids = fields.One2many('component.component', 'cost_sheet_id', string='Component Line',copy=False)
     category_line_ids = fields.One2many('rab.category', 'cost_sheet_id', string='Category Line',copy=True)
     ga_project_line_ids = fields.One2many('ga.project', 'cost_sheet_id', string='GA Project Line',copy=True)
     waranty_line_ids = fields.One2many('waranty.waranty', 'cost_sheet_id', string='Waranty Line',copy=True)
@@ -31,8 +33,8 @@ class CostSheet(models.Model):
     state = fields.Selection([
         ('draft', 'Draft'),
         ('submit', 'Submited'),
-        ('done', 'Done'),
-        ('cancel', 'Canceled'),
+        ('approved', 'Approved'),
+        ('reject', 'Rejected'),
     ], string='Status',tracking=True, default="draft")
     
     currency_id = fields.Many2one('res.currency',default=lambda self:self.env.company.currency_id.id)
@@ -81,6 +83,30 @@ class CostSheet(models.Model):
         res.crm_id.rab_id = res.id
         return res 
     
+    def create_revision(self):
+        new_name = self.name[0: self.name.index(' Rev.')] if self.revisied else self.name
+        cost_sheet = self.copy({
+            'name': "%s Rev. %s"%(new_name,self.rev + 1),
+            'rev': self.rev + 1,
+            'cost_sheet_revision_id' : self.id,
+            'revisied': True
+        })
+        for category in cost_sheet.category_line_ids:
+            category.parent_component_line_ids.write({'cost_sheet_id': cost_sheet.id})
+            for component in category.parent_component_line_ids:
+                for item in component.item_ids:
+                    item.write({
+                        'cost_sheet_id': item.component_id.cost_sheet_id.id,
+                        'category_id': item.component_id.category_id.id,
+                    })
+        cost_sheet.recompute()
+        return {
+            "type": "ir.actions.act_window",
+            "view_mode": "form",
+            "res_model": "cost.sheet",
+            "res_id": cost_sheet.id
+        }
+    
     
     def action_view_crm(self):
         return {
@@ -93,7 +119,7 @@ class CostSheet(models.Model):
     def action_submit(self):
         self.write({'state':'submit'})
     def action_done(self):
-        self.write({'state':'done'})
+        self.write({'state':'approved'})
     def action_to_draft(self):
         self.write({'state':'draft'})
     
@@ -199,12 +225,13 @@ class RabCategory(models.Model):
     _name = 'rab.category'
     _description = 'Rab Category'
     _rec_name = 'product_id'
+    _order = "sequence"
 
     cost_sheet_id = fields.Many2one('cost.sheet', string='Cost Sheet',ondelete="cascade")
     product_id = fields.Many2one('product.product',required=True)
-    
-    parent_component_line_ids = fields.One2many('component.component', 'category_id', string='Parent Component Line')
-    
+
+    parent_component_line_ids = fields.One2many('component.component', 'category_id', string='Parent Component Line',copy=True)
+    sequence = fields.Integer('Sequence')
     price = fields.Float(compute='_compute_price',store=True)
     propotional = fields.Float(compute='_compute_price', string='Propotional',store=True)
     suggested_proposional = fields.Float(compute='_compute_sug_price', string='Sug. Commercial Price',store=True)
@@ -212,7 +239,8 @@ class RabCategory(models.Model):
     final_price  = fields.Float('Final Price',compute="_compute_final_price",inverse="_inverse_final_price")
     final_price_percentage = fields.Float('Final %')
     
-    
+    def name_get(self):
+        return [(i.id, "[%s] %s" % (i.cost_sheet_id.name,i.product_id.display_name)) for i in self]
     
     @api.depends('cost_sheet_id.total_cost_round_up','input_manual','price','final_price_percentage')
     def _compute_final_price(self):
@@ -296,16 +324,16 @@ class ComponentComponent(models.Model):
     _name = 'component.component'
     _description = 'Component Component'
     _rec_name = "product_id"
-    _order = "category_id"
+    _order = "sequence"
     
     
-    cost_sheet_id = fields.Many2one('cost.sheet', string='Cost Sheet',ondelete="cascade")
+    cost_sheet_id = fields.Many2one('cost.sheet', string='Cost Sheet',ondelete="cascade",copy=False)
     rap_id = fields.Many2one('rap.rap', string='RAP')
     category_id = fields.Many2one('rab.category', string='Category',ondelete="cascade")
     rap_category_id = fields.Many2one('rap.category', string='Category',ondelete="cascade")
     product_id = fields.Many2one('product.product',required=True)
-    item_ids = fields.One2many('item.item', 'component_id')
-    
+    item_ids = fields.One2many('item.item', 'component_id',copy=True)
+    sequence = fields.Integer('Sequence')
     total_price = fields.Float(compute='_compute_total_price', string='Total Amount')
     created_after_approve = fields.Boolean('Created After Approve')
     rap_state = fields.Selection(related='rap_id.state',store=True)
@@ -324,12 +352,31 @@ class ComponentComponent(models.Model):
     #         if len(data) > 1:
     #             raise ValidationError('Cannot create same product in one component')
     
-    def get_items(self):
-        master = self.env['master.item'].search([('component_id', '=', self.id)])
+    def get_items_rab(self):
+        master = self.env['master.item'].search([('product_id', '=', self.product_id.id)])
+        
         if master:
             self.write({
                 'item_ids':[(0,0,{
-                    'product_id': item.product_id.id
+                    'cost_sheet_id': self.cost_sheet_id.id,
+                    'product_id': item.product_id.id,
+                    'uom_id': item.product_id.uom_id.id,
+                    'category_id': self.category_id.id
+                }) for item in master[0].item_line_ids]
+            })
+        else:
+            raise ValidationError('Master data items for Component %s does not exist'%(self.product_id.display_name))
+    
+    def get_items_rap(self):
+        master = self.env['master.item'].search([('product_id', '=', self.product_id.id)])
+        
+        if master:
+            self.write({
+                'item_ids':[(0,0,{
+                    'rap_id':self.rap_id.id,
+                    'product_id': item.product_id.id,
+                    'uom_id': item.product_id.uom_id.id,
+                    'category_id': self.category_id.id                
                 }) for item in master[0].item_line_ids]
             })
         else:

@@ -6,7 +6,7 @@
         <field name="model">master.item</field>
         <field name="arch" type="xml">
             <tree sample="1">
-                <field name="component_id" />
+                <field name="product_id" />
             </tree>
         </field>
     </record>
@@ -18,7 +18,7 @@
             <form>
                 <sheet>
                     <group>
-                        <field name="component_id" />
+                        <field name="product_id" />
                     </group>
                     <group string="Items">
                         <field name="item_line_ids" nolabel="1">

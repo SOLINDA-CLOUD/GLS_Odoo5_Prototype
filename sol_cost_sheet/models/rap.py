@@ -14,21 +14,21 @@ class CsRAP(models.Model):
     date_document = fields.Date('Request Date',tracking=True,default=fields.Date.today)
     user_id = fields.Many2one('res.users', string='Responsible',default=lambda self:self.env.user.id)
     note = fields.Text('Term and condition')
-    # approval_id = fields.Many2one('approval.approval', string='Approval')
-    # approver_id = fields.Many2one('approver.line', string='Approver')
+    approval_id = fields.Many2one('approval.approval', string='Approval')
+    approver_id = fields.Many2one('approver.line', string='Approver')
     state = fields.Selection([
         ('draft', 'Draft'),
-        ('waiting_approve_gm', 'Waiting Approval GM'),
-        ('waiting_approve_dir', 'Waiting Approval Direksi'),
+        ('submit', 'Submited'),
+        ('waiting', 'Waiting Approval'),
         ('done', 'Done'),
         ('revisied', 'Revisied'),
         ('cancel', 'Canceled'),
     ], string='Status',tracking=True, default="draft")
     category_line_ids = fields.One2many('rap.category', 'rap_id', string='Category Line')
-    
+    total_amount = fields.Float(compute='_compute_total_amount', string='Total Amount',store=True)
 
     currency_id = fields.Many2one('res.currency', string='currency',default=lambda self:self.env.company.currency_id.id)
-    # is_approver = fields.Boolean(compute='_compute_is_approver', string='Is Approver')
+    is_approver = fields.Boolean(compute='_compute_is_approver', string='Is Approver')
     
     @api.model
     def create(self, vals):
@@ -37,18 +37,20 @@ class CsRAP(models.Model):
         # res.crm_id.rab_id = res.id
         return res 
     
+    @api.depends('category_line_ids.price_unit')
+    def _compute_total_amount(self):
+        for this in self:
+            this.total_amount = sum(this.category_line_ids.mapped('price_unit'))
+    
     def action_submit(self):
-        self.write({'state':'waiting_approve_gm'})
-    def action_approve_gm(self):
-        self.write({'state':'waiting_approve_dir'})
-    def action_approve_dir(self):
-        self.write({'state':'done'})
+        self.write({'state':'submit'})
+        self.waiting_approval()
     def action_to_draft(self):
-        self.write({'state':'draft'})
+        self.write({'state':'draft','approval_id':False,'approver_id':False})
     def action_cancel(self):
         self.write({'state':'cancel'})
     def action_revision(self):
-        self.write({'state':'revisied'})
+        self.write({'state':'revisied','approval_id':False,'approver_id':False})
         
 
     
@@ -77,15 +79,15 @@ class CsRAP(models.Model):
         return res 
     
     # @api.depends('approver_id','approval_id')
-    # def _compute_is_approver(self):
-    #     for this in self:
-    #         if this.approval_id or this.approver_id:
-    #             if this.approval_id.approval_type == 'user':
-    #                 this.is_approver = this.env.user.id in this.approver_id.user_ids.ids
-    #             else:
-    #                 this.is_approver = this.env.user.id in this.approver_id.group_ids.users.ids
-    #         else:
-    #             this.is_approver = False
+    def _compute_is_approver(self):
+        for this in self:
+            if this.approval_id or this.approver_id:
+                if this.approval_id.approval_type == 'user':
+                    this.is_approver = this.env.user.id in this.approver_id.user_ids.ids
+                else:
+                    this.is_approver = this.env.user.id in this.approver_id.group_ids.users.ids
+            else:
+                this.is_approver = False
 
     def waiting_approval(self):
         for request in self:
@@ -94,27 +96,21 @@ class CsRAP(models.Model):
                 approver_id = request.approval_id.approver_line_ids.search([("amount", "<=", request.total_amount),('sequence','>',request.approver_id.sequence)],limit=1)
                 if approver_id:
                     request.write({"approver_id": approver_id.id})
-                    # request.notify()
                 else:
                     request.write({"state": "done","approver_id":False })
 
             else:
                 approver_id = request.approval_id.approver_line_ids.search([("amount", "<=", request.total_amount)],order="sequence ASC",limit=1)
                 if approver_id:
-                    request.write(
-                        {
+                    request.write({
                             "approver_id": approver_id.id,
                             "state": "waiting",
-                        }
-                    )
-                    # request.notify()
+                        })
                 else:
-                    request.write(
-                        {
+                    request.write({
                             "state": "done",
                             "approver_id":False
-                        }
-                    )
+                        })
                     
 
     def action_rap_view_list(self):
@@ -141,10 +137,8 @@ class RapCategory(models.Model):
     product_id = fields.Many2one('product.product',required=True)
     rab_category_id = fields.Many2one('rab.category', string='Rab Category')
     parent_component_line_ids = fields.One2many('component.component', 'rap_category_id', string='Parent Component Line')
-    product_qty = fields.Integer('Product Qty')
     rab_price = fields.Float('RAB Price')
     price_unit = fields.Float('Price')
-    subtotal_amount = fields.Float(compute='_compute_subtotal_amount', string='Subtotal')
     rap_state = fields.Selection(related='rap_id.state',store=True)
 
     
@@ -157,11 +151,7 @@ class RapCategory(models.Model):
                 'target':'new',
                 'res_id': self.id,
             }
-    
-    @api.depends('price_unit','product_qty')
-    def _compute_subtotal_amount(self):
-        for this in self:
-            this.subtotal_amount = this.product_qty * this.price_unit
+  
     
     
     @api.constrains('product_id')

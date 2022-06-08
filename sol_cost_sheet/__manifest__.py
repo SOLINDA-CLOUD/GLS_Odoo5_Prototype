@@ -20,7 +20,7 @@
     'version': '0.1',
 
     # any module necessary for this one to work correctly
-    'depends': ['base','mail','sale_crm','sale_project','purchase_request'],
+    'depends': ['base','mail','project','sale_project','sale_crm','purchase_requisition','purchase','purchase_request'],
 
     # always loaded
     'data': [
@@ -33,6 +33,7 @@
         'wizard/cost_sheet_component.xml',
         'views/project_views.xml',
         'views/rap_views.xml',
+        'views/approval_views.xml',
         'views/menuitem.xml',
         'views/sequence_data.xml',
         'views/templates.xml',

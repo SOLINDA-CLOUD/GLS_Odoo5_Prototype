@@ -9,25 +9,44 @@ class Item(models.Model):
     _rec_name = "product_id"
     
     
-    cost_sheet_id = fields.Many2one('cost.sheet', string='Cost Sheet',ondelete="cascade")
+    cost_sheet_id = fields.Many2one('cost.sheet', string='Cost Sheet',ondelete="cascade",copy=False)
     rap_id = fields.Many2one('rap.rap', string='RAP')
-    product_id = fields.Many2one('product.product',required=True)
-    category_id = fields.Many2one('rab.category', string='Category',ondelete="cascade")
+    product_id = fields.Many2one('product.product')
+    product_uom_category_id = fields.Many2one(related='product_id.uom_id.category_id', readonly=True)
+    category_id = fields.Many2one('rab.category', string='Category',ondelete="cascade",copy=False)
     rap_category_id = fields.Many2one('rap.category', string='Category',ondelete="cascade")
     component_id = fields.Many2one('component.component',ondelete="cascade")
+    sequence = fields.Integer('Sequence')
+    name = fields.Char('Description',copy=True)
+    display_type = fields.Selection([
+        ('line_section', "Section"),
+        ('line_note', "Note")], default=False, help="Technical field for UX purpose.")
     product_type = fields.Selection(related='product_id.detailed_type',store=True)
     qty_on_hand = fields.Float('Qty On Hand',related='product_id.qty_available')
     uom_id = fields.Many2one('uom.uom')
-    product_qty = fields.Integer('Quantity',default=1)
-    existing_price = fields.Float('Existing Price',related='product_id.list_price',store=True)
-    rfq_price = fields.Float('RFQ Price')
+    product_qty = fields.Integer('Quantity',default=1,copy=True)
+    existing_price = fields.Float('Existing Price',compute="_compute_existing_price",store=True)
+    rfq_price = fields.Float('RFQ Price',copy=True)
     total_price = fields.Float(compute='_compute_total_price', string='Total Price',store=True)
-    remarks = fields.Text('Remarks')
+    remarks = fields.Text('Remarks',copy=True)
     created_after_approve = fields.Boolean('Created After Approve')
     can_be_purchased = fields.Boolean(compute='_compute_can_be_purchased', string='Can BE Purchased',store=True)
     rap_price = fields.Float('Price',default=lambda self:self.total_price)
     purchase_line_ids = fields.One2many('purchase.request.line', 'item_id', string='Purchase Line')
     revisied = fields.Boolean('Revisied')
+    
+    purchase_request_line_ids = fields.One2many('purchase.request.line', 'item_id', string='Purchase REquest Line')
+    purchase_order_line_ids = fields.One2many('purchase.order.line', 'item_id', string='Purchase Request Line')
+    
+    
+    @api.depends('product_id')
+    def _compute_existing_price(self):
+        for this in self:
+            stock_valuation = this.product_id.stock_valuation_layer_ids.sorted(reverse=True)
+            cost = stock_valuation[0].unit_cost if stock_valuation else 0.0
+            this.existing_price = cost
+            if not this.rfq_price:
+                this.rfq_price = cost
     
     @api.onchange('product_id')
     def onchange_product_id(self):
@@ -35,7 +54,15 @@ class Item(models.Model):
             return
 
         self.uom_id = self.product_id.uom_po_id or self.product_id.uom_id
-        
+        product_lang = self.product_id.with_context(
+            lang=get_lang(self.env, self.env.user.partner_id.lang).code,
+            partner_id=self.env.user.partner_id.id,
+            company_id=self.env.company.id,
+        )
+        name = product_lang.display_name
+        if product_lang.description_purchase:
+            name += '\n' + product_lang.description_purchase
+        self.name = name
     
     @api.depends('qty_on_hand','product_qty')
     def _compute_can_be_purchased(self):
@@ -51,14 +78,9 @@ class Item(models.Model):
     def _constrains_product_id(self):
         for this in self:
             data = this.env['item.item'].search([('cost_sheet_id', '=', this.cost_sheet_id.id),('category_id', '=', this.category_id.id),('product_id', '=', this.product_id.id)])
-            if len(data) > 1:
+            if len(data) > 2:
                 raise ValidationError('Cannot create same product in one item')
 
-    # @api.onchange('category_id')
-    # def _onchange_category_id(self):
-    #     if self.category_id or self.component_id:
-    #         self.cost_sheet_id = self.category_id.cost_sheet_id.id or self.component_id.cost_sheet_id.id
-    
     
     def view_item_in_purchase(self):
         return {
@@ -71,9 +93,6 @@ class Item(models.Model):
         }
     
     def create_purchase_request(self):
-        # product_type = self.mapped('product_type')
-        # if "service" in product_type or 'consu' in product_type:
-        #     raise ValidationError("""There are a products with Product Type "Service" or "Consumable". Only "Storable Product" that can be create a Purchase Request """)
         items = [item.product_id.name for item in self if not item.can_be_purchased] # Pengecekan product/item yang tidak dapat create purchase karna qty_on_hand lebih atau sama dengan quantity  
         if items:
             raise ValidationError("""There are Product can't created purchase order because Qty on Hand is bigger or equal than Quantity:
