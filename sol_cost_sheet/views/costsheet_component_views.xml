@@ -48,21 +48,25 @@
       <field name="model">item.item</field>
       <field name="arch" type="xml">
         <!-- <tree string="" editable="bottom"> -->
-        <tree create="0" editable="bottom" decoration-success="qty_on_hand &lt; product_qty" decoration-danger="revisied == True">
+        <tree create="0" editable="bottom" decoration-danger="revisied == True">
           <!-- <field name="cost_sheet_id" /> -->
           <field name="revisied" invisible="1" />
           <field name="rap_id" readonly="1" />
           <field name="product_id" readonly="1" />
           <field name="uom_id" readonly="1" />
           <field name="product_type" readonly="1" />
-          <field name="qty_on_hand" readonly="1" />
           <field name="product_qty" readonly="1" />
           <field name="category_id" readonly="1" />
           <field name="component_id" readonly="1" />
+          <field name="qty_pr" />
+          <button name="view_item_in_pr_line" type="object" icon="fa-pencil-square-o" />
+          <field name="qty_po" />
+          <button name="view_item_in_po_line" type="object" icon="fa-pencil-square-o" />
           <!-- <field name="existing_price" /> -->
           <!-- <field name="rfq_price" /> -->
           <field name="total_price" string="RAB Price" />
-          <field name="rap_price" />
+          <field name="price_po" />
+          <!-- <field name="rap_price" /> -->
           <button name="view_item_in_purchase" type="object" icon="fa-pencil-square-o" />
         </tree>
       </field>

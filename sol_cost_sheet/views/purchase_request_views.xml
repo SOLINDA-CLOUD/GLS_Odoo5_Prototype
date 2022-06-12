@@ -1,0 +1,50 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+
+    <data>
+
+        <record id="view_purchase_request_form_inherit_purchase_request" model="ir.ui.view">
+            <field name="name">purchase.request.view.form.inherit</field>
+            <field name="model">purchase.request</field>
+            <field name="inherit_id" ref="purchase_request.view_purchase_request_form"/>
+            <field name="arch" type="xml">
+
+                <xpath expr="//field[@name='line_ids']/tree/field[@name='product_qty']" position="after">
+                    <field name="qty_item" />
+                </xpath>
+
+                <xpath expr="//field[@name='line_ids']/tree/field[@name='company_id']" position="attributes">
+                    <attribute name="optional">hide</attribute>
+                </xpath>
+
+                <xpath expr="//field[@name='line_ids']/tree" position="attributes">
+                    <attribute name="decoration-danger">product_qty &gt; qty_item</attribute>
+                </xpath>
+
+
+            </field>
+        </record>
+
+
+        <!-- specifications -->
+
+        <record id="view_purchase_request_form_detail_inherit_purchase_request" model="ir.ui.view">
+            <field name="name">purchase.request.line.detail.view.form.inherit</field>
+            <field name="model">purchase.request.line</field>
+            <field name="inherit_id" ref="purchase_request.purchase_request_line_form"/>
+            <field name="arch" type="xml">
+
+                <xpath expr="//group[@name='specifications']" position="before">
+                    <group name="reason" string="Reason">
+                        <field name="reason_qty_different" nolabel="1" />
+                    </group>
+                </xpath>
+
+
+            </field>
+        </record>
+
+    </data>
+
+
+</odoo>

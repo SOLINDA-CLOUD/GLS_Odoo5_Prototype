@@ -6,7 +6,8 @@ from . import crm
 from . import sale
 from . import project
 from . import rap
+from . import items
 from . import purchase_request
 from . import purchase_order
-from . import items
 from . import cost_sheet
+from . import purchase_request_line_make_purchase_order
