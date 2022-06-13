@@ -16,10 +16,7 @@ class SaleOrder(models.Model):
             raise ValidationError("Total in Payment Schedule is greater then total amount in sales")
     
     def _get_default_note(self):
-        result = """<div>
-                        <p class="terms">Payment terms are</p>
-                        <ul><li>15 in advance</li></ul>
-                </div>"""
+        result = "Quotation Validity"
         return result
 
     note = fields.Html(string='Term and Conditions', required=True, default=_get_default_note)
