@@ -15,6 +15,22 @@ class SaleOrder(models.Model):
         if total > self.amount_total:
             raise ValidationError("Total in Payment Schedule is greater then total amount in sales")
     
+    def _get_default_note(self):
+        result = """
+                    <div>
+                        <ul>
+                            <li>Quotation Validity :</li>
+                            <li>Delivery Time :</li>
+                            <li>Exclude / Include Installation :</li>
+                            <li>Delivery Point :</li>
+                            <li>Payment Terms :</li>
+                        <ul/>
+                    </div>
+                """
+        return result
+
+    note = fields.Html(string='Description', required=True, default=_get_default_note)
+    
 class PaymentSchedule(models.Model):
     _name = 'payment.schedule'
     _description = 'Payment Schedule'
