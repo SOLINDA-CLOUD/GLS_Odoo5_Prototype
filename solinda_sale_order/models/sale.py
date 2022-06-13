@@ -23,8 +23,10 @@ class SaleOrder(models.Model):
                             <li>Delivery Time :</li>
                             <li>Exclude / Include Installation :</li>
                             <li>Delivery Point :</li>
+                            <li>Price :</li>
+                            <li>Revitalization period :</li>
                             <li>Payment Terms :</li>
-                        <ul/>
+                        </ul>
                     </div>
                 """
         return result
