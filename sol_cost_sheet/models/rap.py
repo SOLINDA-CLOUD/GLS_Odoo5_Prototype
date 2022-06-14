@@ -2,7 +2,6 @@ from odoo import _, api, fields, models
 from odoo.exceptions import ValidationError
 from odoo.tools.float_utils import float_round
 
-
 class CsRAP(models.Model):
     _name = 'rap.rap'
     _description = 'RAP'
@@ -20,15 +19,17 @@ class CsRAP(models.Model):
         ('draft', 'Draft'),
         ('submit', 'Submited'),
         ('waiting', 'Waiting Approval'),
-        ('done', 'Done'),
+        ('done', 'Approved'),
         ('revisied', 'Revisied'),
-        ('cancel', 'Canceled'),
+        ('cancel', 'Rejected'),
     ], string='Status',tracking=True, default="draft")
     category_line_ids = fields.One2many('rap.category', 'rap_id', string='Category Line')
     total_amount = fields.Float(compute='_compute_total_amount', string='Total Amount',store=True)
+    total_amount_rab = fields.Float(compute='_compute_total_amount', string='Total RAB Amount',store=True)
 
     currency_id = fields.Many2one('res.currency', string='currency',default=lambda self:self.env.company.currency_id.id)
     is_approver = fields.Boolean(compute='_compute_is_approver', string='Is Approver')
+    reason = fields.Text('Note')
     
     @api.model
     def create(self, vals):
@@ -37,10 +38,11 @@ class CsRAP(models.Model):
         # res.crm_id.rab_id = res.id
         return res 
     
-    @api.depends('category_line_ids.price_unit')
+    @api.depends('category_line_ids.price_unit','category_line_ids.rab_price')
     def _compute_total_amount(self):
         for this in self:
             this.total_amount = sum(this.category_line_ids.mapped('price_unit'))
+            this.total_amount_rab = sum(this.category_line_ids.mapped('rab_price'))
     
     def action_submit(self):
         self.write({'state':'submit'})
@@ -123,10 +125,6 @@ class CsRAP(models.Model):
             "context": {'default_rap_id':self.id},
         }
 
-        
-   
-    
-
 class RapCategory(models.Model):
     _name = 'rap.category'
     _description = 'Rap Category'
@@ -138,9 +136,14 @@ class RapCategory(models.Model):
     rab_category_id = fields.Many2one('rab.category', string='Rab Category')
     parent_component_line_ids = fields.One2many('component.component', 'rap_category_id', string='Parent Component Line')
     rab_price = fields.Float('RAB Price')
-    price_unit = fields.Float('Price')
+    price_unit = fields.Float('Price',compute="_compute_price_unit")
     rap_state = fields.Selection(related='rap_id.state',store=True)
 
+    
+    @api.depends('parent_component_line_ids.item_ids.price_po')
+    def _compute_price_unit(self):
+        for this in self:
+            this.price_unit = sum(this.parent_component_line_ids.mapped('item_ids.price_po'))
     
     def action_view_detail_rap(self):
         return {

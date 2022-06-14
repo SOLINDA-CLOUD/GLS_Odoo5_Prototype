@@ -8,6 +8,29 @@
             <field name="model">purchase.request</field>
             <field name="inherit_id" ref="purchase_request.view_purchase_request_form"/>
             <field name="arch" type="xml">
+                <button name="button_to_approve" position="after">
+                    <button string="Approve" name="action_approve_gm" type="object" class="oe_highlight" states="to_approve"/>
+                    <!-- <button string="Approve dir" name="button_approved" type="object" class="oe_highlight" attrs="{'invisible':['|',('qty_is_bigger','=',False),('state','!=','approved_gm')]}"/> -->
+                </button>
+
+
+
+                <xpath expr="//button[@name='button_approved']" position="attributes">
+                    <attribute name="states" remove="to_approve"/>
+                    <attribute name="attrs">{'invisible':['|',('qty_is_bigger','=',False),('state','!=','approved_gm')]}</attribute>
+                </xpath>
+                <xpath expr="//button[@name='button_draft']" position="attributes">
+                    <attribute name="states" remove="to_approve"/>
+                    <attribute name="attrs">{'invisible':['|',('qty_is_bigger','=',False),('state','!=','approved_gm')]}</attribute>
+                </xpath>
+                <xpath expr="//button[@name='button_rejected']" position="attributes">
+                    <attribute name="states" remove="to_approve"/>
+                    <attribute name="attrs">{'invisible':['|',('qty_is_bigger','=',False),('state','!=','approved_gm')]}</attribute>
+                </xpath>
+
+                <field name="group_id" position="after">
+                    <field name="qty_is_bigger" invisible="0" />
+                </field>
 
                 <xpath expr="//field[@name='line_ids']/tree/field[@name='product_qty']" position="after">
                     <field name="qty_item" />
@@ -15,6 +38,11 @@
 
                 <xpath expr="//field[@name='line_ids']/tree/field[@name='company_id']" position="attributes">
                     <attribute name="optional">hide</attribute>
+                </xpath>
+
+                <xpath expr="//field[@name='line_ids']/tree/field[@name='purchase_state']" position="after">
+                    <field name="product_qty_is_bigger" invisible="1" />
+                    <field name="reason_qty_different" attrs="{'column_invisible':[('parent.qty_is_bigger','=',False)]}" />
                 </xpath>
 
                 <xpath expr="//field[@name='line_ids']/tree" position="attributes">
@@ -37,6 +65,23 @@
                 <xpath expr="//group[@name='specifications']" position="before">
                     <group name="reason" string="Reason">
                         <field name="reason_qty_different" nolabel="1" />
+                    </group>
+                </xpath>
+
+
+            </field>
+        </record>
+
+
+        <record id="view_purchase_request_line_details_inherit_purchase_request" model="ir.ui.view">
+            <field name="name">purchase.request.line.details.view.form.inherit</field>
+            <field name="model">purchase.request.line</field>
+            <field name="inherit_id" ref="purchase_request.view_purchase_request_line_details"/>
+            <field name="arch" type="xml">
+
+                <xpath expr="//group[@name='specifications']" position="before">
+                    <group name="reason" string="Reason">
+                        <field name="reason_qty_different" nolabel="1" readonly="1" />
                     </group>
                 </xpath>
 

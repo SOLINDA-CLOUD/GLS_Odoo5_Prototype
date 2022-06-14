@@ -29,7 +29,7 @@
                         <button string="View Items" name="view_component_rap" type="object" class="oe_highlight"/>
                         <button string="Submit" name="action_submit" states="draft,revisied" type="object" class="oe_highlight"/>
                         <button string="Approve" name="waiting_approval" type="object" attrs="{'invisible':[('is_approver','=', False)]}" class="oe_highlight"/>
-                        <button string="Revision" name="action_revision" states="done,waiting" type="object" class="oe_highlight"/>
+                        <button string="Revision" name="action_revision" states="done,cancel" type="object" class="oe_highlight"/>
                         <button string="Cancel" name="action_cancel" states="done" type="object"/>
                         <button string="Set to Draft" name="action_to_draft" states="done" type="object"/>
                         <field name="state" widget="statusbar" statusbar_visible="draft,submit,done" />
@@ -41,9 +41,10 @@
                             </h1>
                         </div>
                         <group col="4">
-                            <field name="date_document" />
+                            <field name="date_document" attrs="{'readonly':[('state','!=','draft')]}" />
                             <field name="user_id" readonly="1" />
                             <field name="project_id" readonly="1" />
+                            <field name="reason" />
                             <field name="approval_id" invisible="1" />
                             <field name="approver_id" invisible="1" />
                             <field name="is_approver" invisible="1" />
@@ -51,7 +52,7 @@
                         </group>
                         <notebook>
                             <page string="Category">
-                                <field name="category_line_ids">
+                                <field name="category_line_ids" attrs="{'readonly':[('state','!=','draft')]}">
                                     <tree editable="bottom">
                                         <field name="product_id" />
                                         <field name="rab_price" />
@@ -62,9 +63,10 @@
 
                                 <group name="note_group" col="6" class="mt-2 mt-md-0">
                                     <group colspan="4">
-                                        <field name="note" nolabel="1" placeholder="Terms and conditions..."/>
+                                        <field name="note" nolabel="1" placeholder="Terms and conditions..." attrs="{'readonly':[('state','!=','draft')]}"/>
                                     </group>
                                     <group class="oe_subtotal_footer oe_right" colspan="2" name="sale_total">
+                                        <field name="total_amount_rab" />
                                         <div class="oe_subtotal_footer_separator oe_inline o_td_label">
                                             <label for="total_amount"/>
                                         </div>
