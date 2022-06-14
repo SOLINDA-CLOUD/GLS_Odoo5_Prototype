@@ -7,7 +7,12 @@ class SaleOrder(models.Model):
     _description = 'Sale Order'
     
     payment_schedule_line_ids = fields.One2many('payment.schedule', 'order_id', string='Payment Schedule Line')
-    
+    quotation_validity = fields.Char(string = 'Quotation Validity')
+    delivery_time = fields.Char(string = 'Delivery Time')
+    delivery_point = fields.Char(string = 'Delivery Point')
+    price_tnc = fields.Html(string = 'Price')
+    payment_terms = fields.Html(string = 'Payment Terms')
+    revitalization_period = fields.Char(string = 'Revitalization Period')
     
     @api.onchange('payment_schedule_line_ids')
     def _onchange_payment_schedule_line_ids(self):
@@ -15,11 +20,6 @@ class SaleOrder(models.Model):
         if total > self.amount_total:
             raise ValidationError("Total in Payment Schedule is greater then total amount in sales")
     
-    def _get_default_note(self):
-        result = "Quotation Validity"
-        return result
-
-    note = fields.Html(string='Term and Conditions', required=True, default=_get_default_note)
     
 class PaymentSchedule(models.Model):
     _name = 'payment.schedule'
