@@ -7,13 +7,19 @@ class SaleOrder(models.Model):
     _description = 'Sale Order'
     
     payment_schedule_line_ids = fields.One2many('payment.schedule', 'order_id', string='Payment Schedule Line')
-    
+    quotation_validity = fields.Char(string = 'Quotation Validity')
+    delivery_time = fields.Char(string = 'Delivery Time')
+    delivery_point = fields.Char(string = 'Delivery Point')
+    price_tnc = fields.Html(string = 'Price')
+    payment_terms = fields.Html(string = 'Payment Terms')
+    revitalization_period = fields.Char(string = 'Revitalization Period')
     
     @api.onchange('payment_schedule_line_ids')
     def _onchange_payment_schedule_line_ids(self):
         total = sum(self.payment_schedule_line_ids.mapped('total_amount'))
         if total > self.amount_total:
             raise ValidationError("Total in Payment Schedule is greater then total amount in sales")
+    
     
 class PaymentSchedule(models.Model):
     _name = 'payment.schedule'

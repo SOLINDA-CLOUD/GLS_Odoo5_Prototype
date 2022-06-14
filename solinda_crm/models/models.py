@@ -92,7 +92,7 @@ class RawWaterCharacterizations(models.Model):
     parameter = fields.Char(string="Parameter")
     unit = fields.Char(string="Unit")
     value = fields.Float(string="Value")
-    remarks = fields.Boolean(string="Remarks")
+    remarks = fields.Char(string="Remarks")
     crm_id = fields.Many2one("crm.lead", string="CRM")
 
 class TreatedWaterQuality(models.Model):
@@ -113,7 +113,7 @@ class ExistingChemical(models.Model):
     average_daily = fields.Float('Average')
     min_daily = fields.Float('MIN')
     max_daily = fields.Float('MAX')
-    remarks = fields.Boolean('Remarks')
+    remarks = fields.Char('Remarks')
     crm_id = fields.Many2one('crm.lead', string="CRM")
 
 class CrmLead(models.Model):
